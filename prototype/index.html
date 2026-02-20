@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIB Framework: Orchestrator Console</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#0a0f18',
+                            panel: '#111827',
+                            bigsis: '#00f2fe',
+                            lilsis: '#d946ef',
+                            bro: '#f97316'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body { background-color: #0a0f18; color: #e2e8f0; }
+        
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 50;
+            position: absolute;
+            pointer-events: none;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(255,255,255,0.05) 10%, rgba(0,0,0,0) 100%);
+            opacity: 0.1;
+            animation: scanline 8s linear infinite;
+        }
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+
+        /* Glowing Meters */
+        .meter-bar-bigsis { background: linear-gradient(90deg, #0284c7 0%, #00f2fe 100%); box-shadow: 0 0 10px #00f2fe88; }
+        .meter-bar-lilsis { background: linear-gradient(90deg, #9333ea 0%, #d946ef 100%); box-shadow: 0 0 10px #d946ef88; }
+        .meter-bar-bro { background: linear-gradient(90deg, #ea580c 0%, #f97316 100%); box-shadow: 0 0 10px #f9731688; }
+
+        /* Holographic Panels */
+        .holo-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .holo-panel::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        /* CRT Flicker Text */
+        .flicker {
+            animation: flicker 0.15s infinite;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.9; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+    </style>
+</head>
+<body class="font-mono h-screen w-screen overflow-hidden selection:bg-cyan-500/30">
+    <div class="scanline"></div>
+    <div id="root" class="h-full w-full relative z-10 p-6"></div>
+
+    <script type="text/babel">
+        const agents = [
+            {
+                id: 'BIGSIS',
+                role: 'STRATEGY ORCHESTRATOR',
+                image: 'img/bigsis-board.jpg',
+                color: 'bigsis',
+                border: 'border-cyan-500/50',
+                text: 'text-cyan-400',
+                emotion: 'FOCUSED (Deep Work)',
+                emotionColor: 'text-cyan-300',
+                meters: [
+                    { name: 'Token Budget', level: 85 },
+                    { name: 'Context Window', level: 92 },
+                    { name: 'Eval Score', level: 98 },
+                    { name: 'Data Freshness', level: 100 },
+                    { name: 'Reputation', level: 95 }
+                ],
+                traits: ['High-verify', 'Structured', 'Stateful']
+            },
+            {
+                id: 'LILSIS',
+                role: 'INTEGRATION & SECURITY',
+                image: 'img/lilsis-handshake.jpg',
+                color: 'lilsis',
+                border: 'border-purple-500/50',
+                text: 'text-purple-400',
+                emotion: 'PLAYFUL (Exploratory)',
+                emotionColor: 'text-purple-300',
+                meters: [
+                    { name: 'Token Budget', level: 70 },
+                    { name: 'Context Window', level: 65 },
+                    { name: 'Eval Score', level: 88 },
+                    { name: 'API Connect', level: 100 },
+                    { name: 'Visa Level', level: 80 }
+                ],
+                traits: ['Creative', 'Multi-agent', 'Autonomous']
+            },
+            {
+                id: 'BRO',
+                role: 'EXECUTION & BURST',
+                image: 'img/bro-burst.jpg',
+                color: 'bro',
+                border: 'border-orange-500/50',
+                text: 'text-orange-400',
+                emotion: 'ENERGIZED (Low Latency)',
+                emotionColor: 'text-orange-300',
+                meters: [
+                    { name: 'Token Budget', level: 45 },
+                    { name: 'Queue Depth', level: 85 },
+                    { name: 'Eval Score', level: 90 },
+                    { name: 'Enthusiasm', level: 100 },
+                    { name: 'Roommate Sat', level: 60 }
+                ],
+                traits: ['Aggressive', 'Fast', 'Stateless']
+            }
+        ];
+
+        const Meter = ({ name, level, color }) => (
+            <div className="mb-2 relative z-10">
+                <div className="flex justify-between text-[10px] mb-1 text-slate-400">
+                    <span className="uppercase tracking-widest">{name}</span>
+                    <span>{level}%</span>
+                </div>
+                <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full meter-bar-${color} transition-all duration-1000 ease-out`} style={{ width: `${level}%` }}></div>
+                </div>
+            </div>
+        );
+
+        const AgentCard = ({ agent }) => (
+            <div className={`holo-panel rounded-lg p-5 flex flex-col h-full ${agent.border} shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-transform hover:scale-[1.01] duration-300`}>
+                
+                {/* Header */}
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div>
+                        <h2 className={`text-2xl font-bold tracking-widest flicker ${agent.text}`}>{agent.id}</h2>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-widest">{agent.role}</p>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-[10px] text-slate-500">CONTEXT STATE</div>
+                        <div className={`text-xs font-bold animate-pulse ${agent.emotionColor}`}>{agent.emotion}</div>
+                    </div>
+                </div>
+
+                {/* Avatar Visual (Sim View) */}
+                <div className={`w-full h-48 mb-4 rounded border ${agent.border} overflow-hidden relative z-10 group bg-black`}>
+                    <img src={agent.image} alt={agent.id} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-transparent to-transparent pointer-events-none"></div>
+                </div>
+
+                {/* Traits (Permanent Persona) */}
+                <div className="mb-6 relative z-10">
+                    <div className="text-[10px] text-slate-500 mb-2 uppercase">Core Traits (Locked)</div>
+                    <div className="flex gap-2">
+                        {agent.traits.map(t => (
+                            <span key={t} className={`text-[10px] px-2 py-1 rounded border ${agent.border} ${agent.text} bg-black/50 backdrop-blur-sm`}>{t}</span>
+                        ))}
+                    </div>
+                </div>
+
+                {/* SIB Meters (The 6 Needs) */}
+                <div className="flex-grow flex flex-col justify-end relative z-10">
+                    <div className="text-[10px] text-slate-500 mb-3 uppercase flex justify-between">
+                        <span>Resource Meters</span>
+                        <span className="text-green-500 animate-pulse">● LIVE</span>
+                    </div>
+                    {agent.meters.map(m => (
+                        <Meter key={m.name} name={m.name} level={m.level} color={agent.color} />
+                    ))}
+                </div>
+            </div>
+        );
+
+        const Dashboard = () => {
+            return (
+                <div className="h-full flex flex-col">
+                    {/* Top Nav */}
+                    <header className="flex justify-between items-center mb-6 px-2 border-b border-white/10 pb-4">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <h1 className="text-xl font-bold tracking-widest text-white">SIB ORCHESTRATOR <span className="text-cyan-500">v2.0</span></h1>
+                                <p className="text-[10px] text-slate-500 uppercase">Simulated Intelligence Build • Multi-Agent Control</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-6 text-sm">
+                            <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> <span className="text-slate-400 text-xs">APARTMENT: ACTIVE</span></div>
+                            <div className="text-xs px-3 py-1 border border-red-500/50 text-red-400 rounded bg-red-500/10 flicker">DEFCON 5</div>
+                        </div>
+                    </header>
+
+                    {/* Main Agent Grid */}
+                    <main className="grid grid-cols-3 gap-6 flex-grow pb-6">
+                        {agents.map(agent => (
+                            <AgentCard key={agent.id} agent={agent} />
+                        ))}
+                    </main>
+
+                    {/* Footer / Shared Infra View */}
+                    <footer className="mt-auto holo-panel border border-slate-700/50 p-4 rounded-lg flex justify-between items-center relative z-10">
+                        <div className="text-[10px] text-slate-500 flex gap-8 uppercase tracking-widest">
+                            <span><strong className="text-white">Shared Infra:</strong> Optimal</span>
+                            <span><strong className="text-white">Roommate Satisfaction:</strong> 82%</span>
+                            <span><strong className="text-white">Season:</strong> SUMMER (High Traffic)</span>
+                        </div>
+                        <div className="flex gap-4">
+                            <img src="img/trio-escalation-response.jpg" className="h-10 w-24 object-cover rounded border border-white/20 opacity-50 hover:opacity-100 cursor-pointer transition-opacity" title="View Escalation Log" />
+                            <img src="img/trio-access-review.jpg" className="h-10 w-24 object-cover rounded border border-white/20 opacity-50 hover:opacity-100 cursor-pointer transition-opacity" title="View Access Review" />
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>
